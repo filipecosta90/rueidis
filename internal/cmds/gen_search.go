@@ -1789,6 +1789,11 @@ func (c FtCreateFieldAs) Vector(algo string, nargs int64, args ...string) FtCrea
 	return (FtCreateFieldFieldTypeVector)(c)
 }
 
+func (c FtCreateFieldAs) Geometry() FtCreateFieldFieldTypeGeometry {
+	c.cs.s = append(c.cs.s, "GEOMETRY")
+	return (FtCreateFieldFieldTypeGeometry)(c)
+}
+
 type FtCreateFieldFieldName Completed
 
 func (c FtCreateFieldFieldName) As(alias string) FtCreateFieldAs {
@@ -1820,6 +1825,11 @@ func (c FtCreateFieldFieldName) Vector(algo string, nargs int64, args ...string)
 	c.cs.s = append(c.cs.s, "VECTOR", algo, strconv.FormatInt(nargs, 10))
 	c.cs.s = append(c.cs.s, args...)
 	return (FtCreateFieldFieldTypeVector)(c)
+}
+
+func (c FtCreateFieldFieldName) Geometry() FtCreateFieldFieldTypeGeometry {
+	c.cs.s = append(c.cs.s, "GEOMETRY")
+	return (FtCreateFieldFieldTypeGeometry)(c)
 }
 
 type FtCreateFieldFieldTypeGeo Completed
@@ -1870,6 +1880,58 @@ func (c FtCreateFieldFieldTypeGeo) FieldName(fieldName string) FtCreateFieldFiel
 }
 
 func (c FtCreateFieldFieldTypeGeo) Build() Completed {
+	c.cs.Build()
+	return Completed(c)
+}
+
+type FtCreateFieldFieldTypeGeometry Completed
+
+func (c FtCreateFieldFieldTypeGeometry) Withsuffixtrie() FtCreateFieldOptionWithsuffixtrie {
+	c.cs.s = append(c.cs.s, "WITHSUFFIXTRIE")
+	return (FtCreateFieldOptionWithsuffixtrie)(c)
+}
+
+func (c FtCreateFieldFieldTypeGeometry) Sortable() FtCreateFieldOptionSortableSortable {
+	c.cs.s = append(c.cs.s, "SORTABLE")
+	return (FtCreateFieldOptionSortableSortable)(c)
+}
+
+func (c FtCreateFieldFieldTypeGeometry) Noindex() FtCreateFieldOptionNoindex {
+	c.cs.s = append(c.cs.s, "NOINDEX")
+	return (FtCreateFieldOptionNoindex)(c)
+}
+
+func (c FtCreateFieldFieldTypeGeometry) Nostem() FtCreateFieldOptionNostem {
+	c.cs.s = append(c.cs.s, "NOSTEM")
+	return (FtCreateFieldOptionNostem)(c)
+}
+
+func (c FtCreateFieldFieldTypeGeometry) Phonetic(phonetic string) FtCreateFieldOptionPhonetic {
+	c.cs.s = append(c.cs.s, "PHONETIC", phonetic)
+	return (FtCreateFieldOptionPhonetic)(c)
+}
+
+func (c FtCreateFieldFieldTypeGeometry) Weight(weight float64) FtCreateFieldOptionWeight {
+	c.cs.s = append(c.cs.s, "WEIGHT", strconv.FormatFloat(weight, 'f', -1, 64))
+	return (FtCreateFieldOptionWeight)(c)
+}
+
+func (c FtCreateFieldFieldTypeGeometry) Separator(separator string) FtCreateFieldOptionSeparator {
+	c.cs.s = append(c.cs.s, "SEPARATOR", separator)
+	return (FtCreateFieldOptionSeparator)(c)
+}
+
+func (c FtCreateFieldFieldTypeGeometry) Casesensitive() FtCreateFieldOptionCasesensitive {
+	c.cs.s = append(c.cs.s, "CASESENSITIVE")
+	return (FtCreateFieldOptionCasesensitive)(c)
+}
+
+func (c FtCreateFieldFieldTypeGeometry) FieldName(fieldName string) FtCreateFieldFieldName {
+	c.cs.s = append(c.cs.s, fieldName)
+	return (FtCreateFieldFieldName)(c)
+}
+
+func (c FtCreateFieldFieldTypeGeometry) Build() Completed {
 	c.cs.Build()
 	return Completed(c)
 }

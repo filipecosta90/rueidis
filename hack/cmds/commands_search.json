@@ -173,7 +173,8 @@
               "TAG",
               "NUMERIC",
               "GEO",
-              "VECTOR"
+              "VECTOR",
+              "GEOMETRY"
             ]
           },
           {
