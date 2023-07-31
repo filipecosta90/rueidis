@@ -1828,7 +1828,7 @@ func (c FtCreateFieldFieldName) Vector(algo string, nargs int64, args ...string)
 }
 
 func (c FtCreateFieldFieldName) Geometry() FtCreateFieldFieldTypeGeometry {
-	c.cs.s = append(c.cs.s, "GEOMETRY")
+	c.cs.s = append(c.cs.s, "GEOSHAPE")
 	return (FtCreateFieldFieldTypeGeometry)(c)
 }
 
