@@ -103,6 +103,12 @@ func (c Arbitrary) Args(args ...string) Arbitrary {
 	return c
 }
 
+func (c Arbitrary) Cache() Cacheable {
+	c.cf = readonly
+	c.cs.Build()
+	return Cacheable{cs: c.cs, cf: c.cf, ks: c.ks}
+}
+
 // Build is used to complete constructing a command
 func (c Arbitrary) Build() Completed {
 	if len(c.cs.s) == 0 || len(c.cs.s[0]) == 0 {
