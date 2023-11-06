@@ -172,6 +172,29 @@ client.DoCache(ctx, client.B().Get().Key("prefix1:1").Cache(), time.Minute).IsCa
 Please make sure that commands passed to `DoCache()` and `DoMultiCache()` are covered by your prefixes.
 Otherwise, their client-side cache will not be invalidated by redis.
 
+### Client Side Caching with Cache Aside Pattern
+
+Cache-Aside is a widely used pattern to cache other data sources into Redis. For example:
+
+```go
+client, err := rueidisaside.NewClient(rueidisaside.ClientOption{
+    ClientOption: rueidis.ClientOption{InitAddress: []string{"127.0.0.1:6379"}},
+})
+if err != nil {
+    panic(err)
+}
+val, err := client.Get(context.Background(), time.Minute, "mykey", func(ctx context.Context, key string) (val string, err error) {
+    if err = db.QueryRowContext(ctx, "SELECT val FROM mytab WHERE id = ?", key).Scan(&val); err == sql.ErrNoRows {
+        val = "_nil_" // cache nil to avoid penetration.
+        err = nil     // clear err in case of sql.ErrNoRows.
+    }
+    return
+})
+// ...
+```
+
+Please refer to the full example at [rueidisaside](https://github.com/redis/rueidis/blob/main/rueidisaside/README.md).
+
 ### Disable Client Side Caching
 
 Some Redis provider doesn't support client-side caching, ex. Google Cloud Memorystore.
@@ -437,5 +460,23 @@ module mymodule
 
 go 1.18
 
-require github.com/redis/rueidis v1.0.19-go1.18
+require github.com/redis/rueidis v1.0.21-go1.18
 ```
+
+## Contributing
+
+Contributions are welcome, including [issues](https://github.com/redis/rueidis/issues), [pull requests](https://github.com/redis/rueidis/pulls), and [discussions](https://github.com/redis/rueidis/discussions).
+Contributions mean a lot to us and help us improve this library and the community!
+
+### Generate command builders
+
+Command builders are generated based on the definitions in [./hack/cmds](./hack/cmds) by running:
+
+```sh
+go generate
+```
+
+### Testing
+
+Please use the [./dockertest.sh](./dockertest.sh) script for running test cases locally.
+And please try your best to have 100% test coverage on code changes.

@@ -63,6 +63,57 @@ var slotsMultiResp = newResult(RedisMessage{typ: '*', values: []RedisMessage{
 	}},
 }}, nil)
 
+var slotsMultiRespWithMultiReplicas = newResult(RedisMessage{typ: '*', values: []RedisMessage{
+	{typ: '*', values: []RedisMessage{
+		{typ: ':', integer: 0},
+		{typ: ':', integer: 8192},
+		{typ: '*', values: []RedisMessage{ // master
+			{typ: '+', string: "127.0.0.1"},
+			{typ: ':', integer: 0},
+			{typ: '+', string: ""},
+		}},
+		{typ: '*', values: []RedisMessage{ // replica1
+			{typ: '+', string: "127.0.0.2"},
+			{typ: ':', integer: 1},
+			{typ: '+', string: ""},
+		}},
+		{typ: '*', values: []RedisMessage{ // replica2
+			{typ: '+', string: "127.0.0.3"},
+			{typ: ':', integer: 2},
+			{typ: '+', string: ""},
+		}},
+		{typ: '*', values: []RedisMessage{ // replica3
+			{typ: '+', string: "127.0.0.4"},
+			{typ: ':', integer: 3},
+			{typ: '+', string: ""},
+		}},
+	}},
+	{typ: '*', values: []RedisMessage{
+		{typ: ':', integer: 8193},
+		{typ: ':', integer: 16383},
+		{typ: '*', values: []RedisMessage{ // master
+			{typ: '+', string: "127.0.1.1"},
+			{typ: ':', integer: 0},
+			{typ: '+', string: ""},
+		}},
+		{typ: '*', values: []RedisMessage{ // replica1
+			{typ: '+', string: "127.0.1.2"},
+			{typ: ':', integer: 1},
+			{typ: '+', string: ""},
+		}},
+		{typ: '*', values: []RedisMessage{ // replica2
+			{typ: '+', string: "127.0.1.3"},
+			{typ: ':', integer: 2},
+			{typ: '+', string: ""},
+		}},
+		{typ: '*', values: []RedisMessage{ // replica3
+			{typ: '+', string: "127.0.1.4"},
+			{typ: ':', integer: 3},
+			{typ: '+', string: ""},
+		}},
+	}},
+}}, nil)
+
 var singleSlotResp = newResult(RedisMessage{typ: '*', values: []RedisMessage{
 	{typ: '*', values: []RedisMessage{
 		{typ: ':', integer: 0},
@@ -628,7 +679,7 @@ func TestClusterClientInit(t *testing.T) {
 
 			atomic.AddInt64(num, 1)
 
-			if err := client.refresh(); err != nil {
+			if err := client.refresh(context.Background()); err != nil {
 				t.Fatalf("unexpected err %v", err)
 			}
 
@@ -701,6 +752,39 @@ func TestClusterClientInit(t *testing.T) {
 			nodes[3] != "127.0.3.1:3" {
 			t.Fatalf("unexpected nodes %v", nodes)
 		}
+	})
+
+	t.Run("Refresh aws cluster", func(t *testing.T) {
+		getClient := func(version int) (client *clusterClient, err error) {
+			return newClusterClient(&ClientOption{InitAddress: []string{"xxxxx.amazonaws.com:1"}}, func(dst string, opt *ClientOption) conn {
+				return &mockConn{
+					DoFn: func(cmd Completed) RedisResult {
+						if dst == "xxxxx.amazonaws.com:1" && strings.Join(cmd.Commands(), " ") == "CLUSTER SHARDS" {
+							return shardsResp
+						}
+						return newErrResult(errors.New("unexpected call"))
+					},
+					AddrFn:    func() string { return "xxxxx.amazonaws.com:1" },
+					VersionFn: func() int { return version },
+				}
+			})
+		}
+
+		t.Run("shards", func(t *testing.T) {
+			client, err := getClient(7)
+			if err != nil {
+				t.Fatalf("unexpected err %v", err)
+			}
+			nodes := client.nodes()
+			sort.Strings(nodes)
+			if len(nodes) != 3 ||
+				nodes[0] != "127.0.0.1:0" ||
+				nodes[1] != "127.0.1.1:1" ||
+				nodes[2] != "xxxxx.amazonaws.com:1" {
+				t.Fatalf("unexpected nodes %v", nodes)
+			}
+			client.Close()
+		})
 	})
 }
 
@@ -2240,25 +2324,82 @@ func TestClusterClientReplicaOnly_PickReplica(t *testing.T) {
 
 func TestClusterClientReplicaOnly_PickMasterIfNoReplica(t *testing.T) {
 	defer ShouldNotLeaked(SetupLeakDetection())
-	m := &mockConn{
-		DoFn: func(cmd Completed) RedisResult {
-			if strings.Join(cmd.Commands(), " ") == "CLUSTER SLOTS" {
-				return singleSlotResp
-			}
-			return RedisResult{}
-		},
-	}
-
-	client, err := newClusterClient(&ClientOption{InitAddress: []string{"127.0.0.1:0"}, ReplicaOnly: true}, func(dst string, opt *ClientOption) conn {
-		copiedM := *m
-		return &copiedM
-	})
-	if err != nil {
-		t.Fatalf("unexpected err %v", err)
-	}
 	t.Run("replicas should be picked", func(t *testing.T) {
-		if client.slots[0] != client.conns["127.0.0.1:0"] {
-			t.Fatalf("unexpected node assigned to slot 0")
+		m := &mockConn{
+			DoFn: func(cmd Completed) RedisResult {
+				if strings.Join(cmd.Commands(), " ") == "CLUSTER SLOTS" {
+					return slotsMultiResp
+				}
+				return RedisResult{}
+			},
+		}
+
+		client, err := newClusterClient(&ClientOption{InitAddress: []string{"127.0.0.1:0"}, ReplicaOnly: true}, func(dst string, opt *ClientOption) conn {
+			copiedM := *m
+			return &copiedM
+		})
+		if err != nil {
+			t.Fatalf("unexpected err %v", err)
+		}
+
+		if client.slots[0] != client.conns["127.0.1.1:1"] {
+			t.Fatalf("unexpected replica node assigned to slot 0")
+		}
+		if client.slots[8192] != client.conns["127.0.1.1:1"] {
+			t.Fatalf("unexpected replica node assigned to slot 8192")
+		}
+		if client.slots[8193] != client.conns["127.0.3.1:1"] {
+			t.Fatalf("unexpected replica node assigned to slot 8193")
+		}
+		if client.slots[16383] != client.conns["127.0.3.1:1"] {
+			t.Fatalf("unexpected replica node assigned to slot 16383")
+		}
+	})
+
+	t.Run("distributed to replicas", func(t *testing.T) {
+		m := &mockConn{
+			DoFn: func(cmd Completed) RedisResult {
+				if strings.Join(cmd.Commands(), " ") == "CLUSTER SLOTS" {
+					return slotsMultiRespWithMultiReplicas
+				}
+				return RedisResult{}
+			},
+		}
+
+		client, err := newClusterClient(&ClientOption{InitAddress: []string{"127.0.0.1:0"}, ReplicaOnly: true}, func(dst string, opt *ClientOption) conn {
+			copiedM := *m
+			return &copiedM
+		})
+		if err != nil {
+			t.Fatalf("unexpected err %v", err)
+		}
+
+		for slot := 0; slot < 8193; slot++ {
+			if client.slots[slot] == client.conns["127.0.0.2:1"] {
+				continue
+			}
+			if client.slots[slot] == client.conns["127.0.0.3:2"] {
+				continue
+			}
+			if client.slots[slot] == client.conns["127.0.0.4:3"] {
+				continue
+			}
+
+			t.Fatalf("unexpected replica node assigned to slot %d", slot)
+		}
+
+		for slot := 8193; slot < 16384; slot++ {
+			if client.slots[slot] == client.conns["127.0.1.2:1"] {
+				continue
+			}
+			if client.slots[slot] == client.conns["127.0.1.3:2"] {
+				continue
+			}
+			if client.slots[slot] == client.conns["127.0.1.4:3"] {
+				continue
+			}
+
+			t.Fatalf("unexpected replica node assigned to slot %d", slot)
 		}
 	})
 }
