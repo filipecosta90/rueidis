@@ -1125,7 +1125,7 @@ func (p *pipe) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options Ca
 	var messages []RedisMessage
 	var err error
 	if options.UseMultiExec {
-		messages, err = rawResponses.s[4].ToArray()
+		messages, err = rawResponses.s[responsePos].ToArray()
 	} else {
 		err = rawResponses.s[responsePos].Error()
 	}
