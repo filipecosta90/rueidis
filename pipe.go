@@ -1137,7 +1137,7 @@ func (p *pipe) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options Ca
 		return newErrResult(err)
 	}
 	if options.UseMultiExec {
-		val = messages[1]
+		val = messages[len(messages)-1]
 	} else {
 		val = rawResponses.s[responsePos].val
 	}
