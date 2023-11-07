@@ -477,6 +477,8 @@ func (p *pipe) _backgroundRead() (err error) {
 		if msg, err = readNextMessage(p.r); err != nil {
 			return
 		}
+		fmt.Println(msg.values)
+
 		if msg.typ == '>' || (r2ps && len(msg.values) != 0 && msg.values[0].string != "pong") {
 			if prply, unsub = p.handlePush(msg.values); !prply {
 				continue
