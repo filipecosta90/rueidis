@@ -47,6 +47,7 @@ var batchcachep = util.NewPool(func(capacity int) *batchcache {
 type conn interface {
 	Do(ctx context.Context, cmd Completed) RedisResult
 	DoCache(ctx context.Context, cmd Cacheable, ttl time.Duration) RedisResult
+	DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) RedisResult
 	DoMulti(ctx context.Context, multi ...Completed) *redisresults
 	DoMultiCache(ctx context.Context, multi ...CacheableTTL) *redisresults
 	Receive(ctx context.Context, subscribe Completed, fn func(message PubSubMessage)) error
@@ -263,6 +264,16 @@ func (m *mux) pipelineMulti(ctx context.Context, cmd []Completed) (resp *redisre
 			m.wire[slot].CompareAndSwap(wire, m.init)
 			return resp
 		}
+	}
+	return resp
+}
+
+func (m *mux) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) RedisResult {
+	slot := cmd.Slot() & uint16(len(m.wire)-1)
+	wire := m.pipe(slot)
+	resp := wire.DoCacheWithOptions(ctx, cmd, options)
+	if isBroken(resp.NonRedisError(), wire) {
+		m.wire[slot].CompareAndSwap(wire, m.init)
 	}
 	return resp
 }

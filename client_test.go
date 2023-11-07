@@ -12,20 +12,21 @@ import (
 )
 
 type mockConn struct {
-	DoFn           func(cmd Completed) RedisResult
-	DoCacheFn      func(cmd Cacheable, ttl time.Duration) RedisResult
-	DoMultiFn      func(multi ...Completed) *redisresults
-	DoMultiCacheFn func(multi ...CacheableTTL) *redisresults
-	ReceiveFn      func(ctx context.Context, subscribe Completed, fn func(message PubSubMessage)) error
-	InfoFn         func() map[string]RedisMessage
-	VersionFn      func() int
-	ErrorFn        func() error
-	CloseFn        func()
-	DialFn         func() error
-	AcquireFn      func() wire
-	StoreFn        func(w wire)
-	OverrideFn     func(c conn)
-	AddrFn         func() string
+	DoFn                 func(cmd Completed) RedisResult
+	DoCacheFn            func(cmd Cacheable, ttl time.Duration) RedisResult
+	DoCacheWithOptionsFn func(cmd Cacheable, options CacheOptions) RedisResult
+	DoMultiFn            func(multi ...Completed) *redisresults
+	DoMultiCacheFn       func(multi ...CacheableTTL) *redisresults
+	ReceiveFn            func(ctx context.Context, subscribe Completed, fn func(message PubSubMessage)) error
+	InfoFn               func() map[string]RedisMessage
+	VersionFn            func() int
+	ErrorFn              func() error
+	CloseFn              func()
+	DialFn               func() error
+	AcquireFn            func() wire
+	StoreFn              func(w wire)
+	OverrideFn           func(c conn)
+	AddrFn               func() string
 
 	DoOverride      map[string]func(cmd Completed) RedisResult
 	DoCacheOverride map[string]func(cmd Cacheable, ttl time.Duration) RedisResult
@@ -64,6 +65,16 @@ func (m *mockConn) Do(ctx context.Context, cmd Completed) RedisResult {
 	}
 	if m.DoFn != nil {
 		return m.DoFn(cmd)
+	}
+	return RedisResult{}
+}
+
+func (m *mockConn) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) RedisResult {
+	if fn := m.DoCacheOverride[strings.Join(cmd.Commands(), " ")]; fn != nil {
+		return fn(cmd, options.ClientTTL)
+	}
+	if m.DoCacheFn != nil {
+		return m.DoCacheFn(cmd, options.ClientTTL)
 	}
 	return RedisResult{}
 }

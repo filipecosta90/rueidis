@@ -106,6 +106,18 @@ retry:
 	return resp
 }
 
+func (c *singleClient) DoCacheWithOptions(ctx context.Context, cmd Cacheable, ttl time.Duration) (resp RedisResult) {
+retry:
+	resp = c.conn.DoCache(ctx, cmd, ttl)
+	if c.retry && c.isRetryable(resp.NonRedisError(), ctx) {
+		goto retry
+	}
+	if err := resp.NonRedisError(); err == nil || err == ErrDoCacheAborted {
+		cmds.PutCacheable(cmd)
+	}
+	return resp
+}
+
 func (c *singleClient) Receive(ctx context.Context, subscribe Completed, fn func(msg PubSubMessage)) (err error) {
 retry:
 	err = c.conn.Receive(ctx, subscribe, fn)
