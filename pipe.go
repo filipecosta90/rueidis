@@ -1085,11 +1085,11 @@ func (p *pipe) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options Ca
 	cmds.CacheableCS(cmd).Verify()
 
 	if cmd.IsMGet() {
-		return p.doCacheMGet(ctx, cmd, options.clientTTL)
+		return p.doCacheMGet(ctx, cmd, options.ClientTTL)
 	}
 	ck, cc := cmds.CacheKey(cmd)
 	now := time.Now()
-	if v, entry := p.cache.Flight(ck, cc, options.clientTTL, now); v.typ != 0 {
+	if v, entry := p.cache.Flight(ck, cc, options.ClientTTL, now); v.typ != 0 {
 		return newResult(v, nil)
 	} else if entry != nil {
 		return newResult(entry.Wait(ctx))
