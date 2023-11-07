@@ -24,9 +24,16 @@ const LIB_VER = "1.0.21"
 
 var noHello = regexp.MustCompile("unknown command .?(HELLO|hello).?")
 
+type CacheOptions struct {
+	UseMultiExec  bool
+	UseServerPTTL bool
+	ClientTTL     time.Duration
+}
+
 type wire interface {
 	Do(ctx context.Context, cmd Completed) RedisResult
 	DoCache(ctx context.Context, cmd Cacheable, ttl time.Duration) RedisResult
+	DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) RedisResult
 	DoMulti(ctx context.Context, multi ...Completed) *redisresults
 	DoMultiCache(ctx context.Context, multi ...CacheableTTL) *redisresults
 	Receive(ctx context.Context, subscribe Completed, fn func(message PubSubMessage)) error
@@ -1068,6 +1075,67 @@ next:
 		goto next
 	}
 	return m, nil
+}
+
+func (p *pipe) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) RedisResult {
+	if p.cache == nil {
+		return p.Do(ctx, Completed(cmd))
+	}
+
+	cmds.CacheableCS(cmd).Verify()
+
+	if cmd.IsMGet() {
+		return p.doCacheMGet(ctx, cmd, options.clientTTL)
+	}
+	ck, cc := cmds.CacheKey(cmd)
+	now := time.Now()
+	if v, entry := p.cache.Flight(ck, cc, options.clientTTL, now); v.typ != 0 {
+		return newResult(v, nil)
+	} else if entry != nil {
+		return newResult(entry.Wait(ctx))
+	}
+	cmdSlice := []Completed{cmds.OptInCmd}
+	responsePos := 1
+	if options.UseMultiExec {
+		responsePos = responsePos + 1
+		cmdSlice = append(cmdSlice, cmds.MultiCmd)
+	}
+	if options.UseServerPTTL {
+		responsePos = responsePos + 1
+		cmdSlice = append(cmdSlice, cmds.NewCompleted([]string{"PTTL", ck}))
+	}
+	cmdSlice = append(cmdSlice, Completed(cmd))
+	if options.UseMultiExec {
+		responsePos = responsePos + 1
+		cmdSlice = append(cmdSlice, cmds.ExecCmd)
+	}
+	rawResponses := p.DoMulti(
+		ctx,
+		cmdSlice...,
+	)
+	defer resultsp.Put(rawResponses)
+	var val RedisMessage
+	var messages []RedisMessage
+	var err error
+	if options.UseMultiExec {
+		messages, err = rawResponses.s[4].ToArray()
+	} else {
+		err = rawResponses.s[responsePos].Error()
+	}
+	if err != nil {
+		if _, ok := err.(*RedisError); ok {
+			err = ErrDoCacheAborted
+		}
+		p.cache.Cancel(ck, cc, err)
+		return newErrResult(err)
+	}
+	if options.UseMultiExec {
+		val = messages[1]
+	} else {
+		val = rawResponses.s[responsePos].val
+	}
+	return newResult(val, nil)
+
 }
 
 func (p *pipe) DoCache(ctx context.Context, cmd Cacheable, ttl time.Duration) RedisResult {
