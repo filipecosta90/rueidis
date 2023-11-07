@@ -106,9 +106,9 @@ retry:
 	return resp
 }
 
-func (c *singleClient) DoCacheWithOptions(ctx context.Context, cmd Cacheable, ttl time.Duration) (resp RedisResult) {
+func (c *singleClient) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) (resp RedisResult) {
 retry:
-	resp = c.conn.DoCache(ctx, cmd, ttl)
+	resp = c.conn.DoCacheWithOptions(ctx, cmd, options)
 	if c.retry && c.isRetryable(resp.NonRedisError(), ctx) {
 		goto retry
 	}

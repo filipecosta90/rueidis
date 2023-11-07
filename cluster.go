@@ -665,6 +665,14 @@ process:
 	return resp
 }
 
+func (c *clusterClient) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) (resp RedisResult) {
+	resp = c.doCache(ctx, cmd, options.ClientTTL)
+	if err := resp.NonRedisError(); err == nil || err == ErrDoCacheAborted {
+		cmds.PutCacheable(cmd)
+	}
+	return resp
+}
+
 func (c *clusterClient) DoCache(ctx context.Context, cmd Cacheable, ttl time.Duration) (resp RedisResult) {
 	resp = c.doCache(ctx, cmd, ttl)
 	if err := resp.NonRedisError(); err == nil || err == ErrDoCacheAborted {

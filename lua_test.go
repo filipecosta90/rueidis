@@ -196,14 +196,15 @@ func TestNewLuaScriptExecMultiRo(t *testing.T) {
 }
 
 type client struct {
-	BFn            func() Builder
-	DoFn           func(ctx context.Context, cmd Completed) (resp RedisResult)
-	DoMultiFn      func(ctx context.Context, cmd ...Completed) (resp []RedisResult)
-	DoCacheFn      func(ctx context.Context, cmd Cacheable, ttl time.Duration) (resp RedisResult)
-	DoMultiCacheFn func(ctx context.Context, cmd ...CacheableTTL) (resp []RedisResult)
-	DedicatedFn    func(fn func(DedicatedClient) error) (err error)
-	DedicateFn     func() (DedicatedClient, func())
-	CloseFn        func()
+	BFn                  func() Builder
+	DoFn                 func(ctx context.Context, cmd Completed) (resp RedisResult)
+	DoMultiFn            func(ctx context.Context, cmd ...Completed) (resp []RedisResult)
+	DoCacheFn            func(ctx context.Context, cmd Cacheable, ttl time.Duration) (resp RedisResult)
+	DoCacheWithOptionsFn func(ctx context.Context, cmd Cacheable, options CacheOptions) (resp RedisResult)
+	DoMultiCacheFn       func(ctx context.Context, cmd ...CacheableTTL) (resp []RedisResult)
+	DedicatedFn          func(fn func(DedicatedClient) error) (err error)
+	DedicateFn           func() (DedicatedClient, func())
+	CloseFn              func()
 }
 
 func (c *client) Receive(ctx context.Context, subscribe Completed, fn func(msg PubSubMessage)) error {
@@ -241,6 +242,13 @@ func (c *client) DoMultiCache(ctx context.Context, cmd ...CacheableTTL) (resp []
 func (c *client) DoCache(ctx context.Context, cmd Cacheable, ttl time.Duration) (resp RedisResult) {
 	if c.DoCacheFn != nil {
 		return c.DoCacheFn(ctx, cmd, ttl)
+	}
+	return RedisResult{}
+}
+
+func (c *client) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) (resp RedisResult) {
+	if c.DoCacheFn != nil {
+		return c.DoCacheWithOptions(ctx, cmd, options)
 	}
 	return RedisResult{}
 }

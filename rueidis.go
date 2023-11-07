@@ -195,6 +195,7 @@ type Client interface {
 	// The in-memory cache size is configured by ClientOption.CacheSizeEachConn.
 	// The cmd parameter is recycled after passing into DoCache() and should not be reused.
 	DoCache(ctx context.Context, cmd Cacheable, ttl time.Duration) (resp RedisResult)
+	DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) (resp RedisResult)
 
 	// DoMultiCache is similar to DoCache, but works with multiple cacheable commands across different slots.
 	// It will first group commands by slots and will send only cache missed commands to redis.

@@ -106,6 +106,18 @@ retry:
 	return resp
 }
 
+func (c *sentinelClient) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options CacheOptions) (resp RedisResult) {
+retry:
+	resp = c.mConn.Load().(conn).DoCacheWithOptions(ctx, cmd, options)
+	if c.retry && c.isRetryable(resp.NonRedisError(), ctx) {
+		goto retry
+	}
+	if err := resp.NonRedisError(); err == nil || err == ErrDoCacheAborted {
+		cmds.PutCacheable(cmd)
+	}
+	return resp
+}
+
 func (c *sentinelClient) DoMultiCache(ctx context.Context, multi ...CacheableTTL) []RedisResult {
 	if len(multi) == 0 {
 		return nil
