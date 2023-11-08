@@ -510,7 +510,11 @@ func (p *pipe) _backgroundRead() (err error) {
 				}
 			}
 		}
+		fmt.Println("in", multi)
+
 		if ff == len(multi) {
+			fmt.Println("multi", multi)
+
 			ff = 0
 			ones[0], multi, ch, resps, cond = p.queue.NextResultCh() // ch should not be nil, otherwise it must be a protocol bug
 			if ch == nil {
@@ -530,7 +534,7 @@ func (p *pipe) _backgroundRead() (err error) {
 				multi = ones
 			}
 		} else if ff >= 4 && len(msg.values) >= 2 && multi[0].IsOptIn() { // if unfulfilled multi commands are lead by opt-in and get success response
-			fmt.Println(multi)
+			fmt.Println("multi exec", multi)
 
 			now := time.Now()
 			if cacheable := Cacheable(multi[ff-1]); cacheable.IsMGet() {
@@ -555,7 +559,7 @@ func (p *pipe) _backgroundRead() (err error) {
 				msg.values[ci].setExpireAt(p.cache.Update(ck, cc, cp))
 			}
 		} else if ff == 2 && len(msg.values) == 1 && multi[0].IsOptIn() { // if unfulfilled multi commands are lead by opt-in and get success response
-			fmt.Println(multi)
+			fmt.Println("no multi multi exec", multi)
 			cacheable := Cacheable(multi[ff-1])
 			ck, cc := cmds.CacheKey(cacheable)
 			ci := len(msg.values) - 1
