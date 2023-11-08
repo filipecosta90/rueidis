@@ -510,7 +510,7 @@ func (p *pipe) _backgroundRead() (err error) {
 				}
 			}
 		}
-		fmt.Println("in", multi)
+		fmt.Println("in", multi, ff, len(msg.values))
 
 		if ff == len(multi) {
 			fmt.Println("multi", multi)
