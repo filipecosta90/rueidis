@@ -1139,7 +1139,7 @@ func (p *pipe) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options Ca
 	}
 	if err != nil {
 		if _, ok := err.(*RedisError); ok {
-			err = ErrDoCacheAborted
+			err = err.(*RedisError)
 		}
 		p.cache.Cancel(ck, cc, err)
 		return newErrResult(err)
