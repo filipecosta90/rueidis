@@ -477,7 +477,6 @@ func (p *pipe) _backgroundRead() (err error) {
 		if msg, err = readNextMessage(p.r); err != nil {
 			return
 		}
-		fmt.Println(msg.values)
 
 		if msg.typ == '>' || (r2ps && len(msg.values) != 0 && msg.values[0].string != "pong") {
 			if prply, unsub = p.handlePush(msg.values); !prply {
@@ -531,6 +530,8 @@ func (p *pipe) _backgroundRead() (err error) {
 				multi = ones
 			}
 		} else if ff >= 4 && len(msg.values) >= 2 && multi[0].IsOptIn() { // if unfulfilled multi commands are lead by opt-in and get success response
+			fmt.Println(multi)
+
 			now := time.Now()
 			if cacheable := Cacheable(multi[ff-1]); cacheable.IsMGet() {
 				cc := cmds.MGetCacheCmd(cacheable)
@@ -554,6 +555,7 @@ func (p *pipe) _backgroundRead() (err error) {
 				msg.values[ci].setExpireAt(p.cache.Update(ck, cc, cp))
 			}
 		} else if ff == 2 && len(msg.values) == 1 && multi[0].IsOptIn() { // if unfulfilled multi commands are lead by opt-in and get success response
+			fmt.Println(multi)
 			cacheable := Cacheable(multi[ff-1])
 			ck, cc := cmds.CacheKey(cacheable)
 			ci := len(msg.values) - 1
