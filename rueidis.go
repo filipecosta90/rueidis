@@ -71,6 +71,11 @@ type ClientOption struct {
 	// Note that this function must be fast, otherwise other redis messages will be blocked.
 	OnInvalidations func([]RedisMessage)
 
+	// SendToReplicas is a function that returns true if the command should be sent to replicas.
+	// currently only used for cluster client.
+	// NOTE: This function can't be used with ReplicaOnly option.
+	SendToReplicas func(cmd Completed) bool
+
 	// Sentinel options, including MasterSet and Auth options
 	Sentinel SentinelOption
 
