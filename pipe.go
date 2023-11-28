@@ -1121,7 +1121,6 @@ func (p *pipe) DoCacheWithOptions(ctx context.Context, cmd Cacheable, options Ca
 	}
 	cmdSlice = append(cmdSlice, Completed(cmd))
 	if options.UseMultiExec {
-		responsePos = responsePos + 1
 		cmdSlice = append(cmdSlice, cmds.ExecCmd)
 	}
 	rawResponses := p.DoMulti(
