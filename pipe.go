@@ -520,7 +520,7 @@ func (p *pipe) _backgroundRead() (err error) {
 			cp := msg.values[ci]
 			cp.attrs = cacheMark
 			msg.values[ci].setExpireAt(p.cache.Update(ck, cc, cp))
-		} else if ff == len(multi) && !multi[0].IsOptIn() {
+		} else if ff == len(multi) {
 			fmt.Println("multi", multi)
 
 			ff = 0
