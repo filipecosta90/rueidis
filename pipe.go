@@ -510,7 +510,7 @@ func (p *pipe) _backgroundRead() (err error) {
 				}
 			}
 		}
-		fmt.Println("in", multi, ff, len(msg.values))
+		fmt.Println(fmt.Sprintf("in. optin? %v, multi=%v, ff=%d, len msg.values=%d ", multi[0].IsOptIn(), multi, ff, len(msg.values)))
 		if ff == 2 && len(msg.values) == 1 && multi[0].IsOptIn() { // if unfulfilled multi commands are lead by opt-in and get success response
 			fmt.Println("no multi multi exec", multi)
 			cacheable := Cacheable(multi[ff-1])
@@ -519,7 +519,7 @@ func (p *pipe) _backgroundRead() (err error) {
 			cp := msg.values[ci]
 			cp.attrs = cacheMark
 			msg.values[ci].setExpireAt(p.cache.Update(ck, cc, cp))
-		} else if ff == len(multi) {
+		} else if ff == len(multi) && !multi[0].IsOptIn() {
 			fmt.Println("multi", multi)
 
 			ff = 0
