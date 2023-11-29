@@ -511,13 +511,6 @@ func (p *pipe) _backgroundRead() (err error) {
 			}
 		}
 		if ff == len(multi) {
-			if ff == 2 && multi[0].IsOptIn() {
-				cacheable := Cacheable(multi[ff-1])
-				ck, cc := cmds.CacheKey(cacheable)
-				cp := resps[1].val
-				cp.attrs = cacheMark
-				cp.setExpireAt(p.cache.Update(ck, cc, cp))
-			}
 			ff = 0
 			ones[0], multi, ch, resps, cond = p.queue.NextResultCh() // ch should not be nil, otherwise it must be a protocol bug
 			if ch == nil {
@@ -585,6 +578,13 @@ func (p *pipe) _backgroundRead() (err error) {
 			resps[ff] = resp
 		}
 		if ff++; ff == len(multi) {
+			if ff == 2 && multi[0].IsOptIn() {
+				cacheable := Cacheable(multi[ff-1])
+				ck, cc := cmds.CacheKey(cacheable)
+				cp := resps[1].val
+				cp.attrs = cacheMark
+				cp.setExpireAt(p.cache.Update(ck, cc, cp))
+			}
 			ch <- resp
 			cond.L.Unlock()
 			cond.Signal()
