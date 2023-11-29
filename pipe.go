@@ -510,25 +510,14 @@ func (p *pipe) _backgroundRead() (err error) {
 				}
 			}
 		}
-		//fmt.Println(fmt.Sprintf("in. optin? %v, multi=%v, ff=%d, len msg.values=%d ", multi[0].IsOptIn(), multi, ff, len(msg.values)))
-
-		//if ff >= 2 && len(msg.values) >= 1 && multi[0].IsOptIn() { // if unfulfilled multi commands are lead by opt-in and get success response
-		//	fmt.Println("no multi multi exec", multi)
-		//
-		//}
 		if ff == len(multi) {
-			if len(multi) > 0 && multi[0].IsOptIn() && len(msg.values) >= 1 {
-				fmt.Println(fmt.Sprintf("in. optin? %v, multi=%v, ff=%d, len msg.values=%d ", multi[0].IsOptIn(), multi, ff, len(msg.values)))
+			if ff == 2 && multi[0].IsOptIn() {
 				cacheable := Cacheable(multi[ff-1])
 				ck, cc := cmds.CacheKey(cacheable)
-				ci := len(msg.values) - 1
-				cp := msg.values[ci]
+				cp := resps[1].val
 				cp.attrs = cacheMark
-				msg.values[ci].setExpireAt(p.cache.Update(ck, cc, cp))
+				cp.setExpireAt(p.cache.Update(ck, cc, cp))
 			}
-
-			fmt.Println("multi", multi)
-
 			ff = 0
 			ones[0], multi, ch, resps, cond = p.queue.NextResultCh() // ch should not be nil, otherwise it must be a protocol bug
 			if ch == nil {
@@ -548,7 +537,6 @@ func (p *pipe) _backgroundRead() (err error) {
 				multi = ones
 			}
 		} else if ff >= 4 && len(msg.values) >= 2 && multi[0].IsOptIn() { // if unfulfilled multi commands are lead by opt-in and get success response
-			fmt.Println("multi exec", multi)
 
 			now := time.Now()
 			if cacheable := Cacheable(multi[ff-1]); cacheable.IsMGet() {
